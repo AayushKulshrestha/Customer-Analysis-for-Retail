@@ -1,0 +1,309 @@
+---
+title: "Retail"
+author: "Aayush"
+date: "08/09/2021"
+output:
+  pdf_document: default
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+#1. Merge the datasets Customers, Product Hierarchy and Transactions as Customer_Final. Ensure to keep all customers who have done transactions with us and select the join type accordingly. a. Use the base merge() b. Dplyr merge functions
+
+
+
+```{r}
+
+setwd("F:\\Analytix_Labs\\R for Data Science\\R Case Studies\\R - Retail Case study\\R case study 1 (Retail)")
+getwd()
+prod_cat_info <- read.csv("prod_cat_info.csv")
+Transactions <- read.csv("Transactions.csv")
+Customer <- read.csv("Customer.csv")
+head(prod_cat_info)
+head(Transactions)
+head(Customer)
+
+
+prod1 <- merge.data.frame(x = Transactions,y = prod_cat_info,by.x ="prod_subcat_code",by.y ="prod_cat_code")
+
+is.null(prod1)
+unique(prod1)
+library(dplyr)
+prod1 %>% distinct()
+Customer_Final <- merge.data.frame(x = prod1,y = Customer,by.x = "cust_id",by.y = "customer_Id")
+
+
+library(dplyr)
+
+
+prod2<- left_join(x = Transactions,y = prod_cat_info,by=c("prod_subcat_code"="prod_cat_code"))
+
+prod2%>% distinct()
+sum(is.na(prod2))
+
+Customer_Final2<- left_join(x = prod2,y = Customer,by=c("cust_id"="customer_Id"))
+
+```
+#2. Prepare a summary report for the merged data set. 
+#a. Get the column names and their corresponding data types 
+```{r}
+
+str(Customer_Final)
+
+
+```
+
+
+#b. Top/Bottom 10 observations
+```{r}
+head(Customer_Final)
+tail(Customer_Final)
+
+
+```
+
+#c.  “Five-number summary” for continuous variables (min, Q1, median, Q3 and max)
+```{r}
+str(Customer_Final)
+info1 <- Customer_Final[,c(1,2,3,5,6,7,8,9)]
+summary(info1)
+
+```
+
+
+#d. Frequency tables for all the categorical variables
+
+```{r}
+class(Customer_Final)
+as.data.frame(Customer_Final)
+
+sapply(Customer_Final, class)
+
+str(Customer_Final)
+
+sapply(Customer_Final, is.factor)
+
+as.factor(Customer_Final$Store_type)
+#is.factor(Customer_Final$Store_type)
+
+Customer_Final[sapply(Customer_Final, is.character)] <- lapply(Customer_Final[sapply(Customer_Final, is.character)],as.factor)
+str(Customer_Final)
+
+info <- Customer_Final[,c("prod_cat","prod_subcat","Gender","Store_type")]
+table(info)
+library(plyr)
+
+count(info$prod_cat)
+count(info$prod_subcat)
+count(info$Gender)
+count(info$Store_type)
+
+```
+#3. Generate histograms for all continuous variables and frequency bars for categorical variables
+
+```{r}
+library(ggplot2)
+
+sum(is.na(info))
+sum(is.na(info1))
+
+table(info)
+typeof(info)
+class(info)
+
+str(info)
+library(ggplot2)
+
+info[sapply(info,is.character)] <- lapply(info[sapply(info, is.character)],as.factor)
+
+plotinfo<- function(x){
+
+a <-ggplot2::qplot(x)
+  plot(a)
+  
+}
+
+sapply(X = info,FUN = plotinfo)
+
+```
+#4. Calculate the following information using the merged dataset :
+#a. Time period of the available transaction data
+```{r}
+str(Customer_Final)
+
+
+as.Date(Customer_Final$tran_date,format = "%d-%m-%Y","%d/%m/%Y")
+
+a <- as.Date(Customer_Final$tran_date,format="%d-%m-%Y")
+b <- as.Date(Customer_Final$tran_date,format="%d/%m/%Y")
+
+a[is.na(a)] <- b[!is.na(b)]
+Customer_Final$tran_date <- a
+
+Customer_Final$tran_date
+class(Customer_Final$tran_date)
+```
+
+
+#b. Count of transactions where the total amount of transaction was negative
+```{r}
+
+#has.neg <- apply(Customer_Final, 1, function(row) any(row < 0))
+#which(has.neg)
+#length(which(has.neg))
+
+nrow(Customer_Final[Customer_Final$total_amt<0,])
+
+
+```
+#5. Analyze which product categories are more popular among females vs male customers.
+
+```{r}
+library(dplyr)
+
+Customer_Final%>%group_by(Gender,prod_cat)%>%summarise(sum(Qty>0))
+
+
+
+
+
+```
+
+
+#6. Which City code has the maximum customers and what was the percentage of customers from that city?
+```{r}
+
+
+library(dplyr)
+city_code1 <- Customer_Final %>%group_by(city_code) %>%summarise(n_distinct(cust_id))
+city_code1
+#citycode 3 has maxium customers
+
+percentage1 <- (514/sum(city_code1$`n_distinct(cust_id)`))*100
+
+
+percentage1
+
+
+```
+#7. Which store type sells the maximum products by value and by quantity?
+
+```{r}
+
+library(dplyr)
+Customer_Final%>%group_by(Store_type)%>% summarise(sum(total_amt,Qty))
+
+#Eshop is selling maxium products
+
+```
+
+#8. What was the total amount earned from the "Electronics" and "Clothing" categories from Flagship Stores?
+
+
+```{r}
+library(dplyr)
+
+Customer_Final%>%group_by(prod_cat)%>%summarise(sum(total_amt,na.rm = TRUE))
+
+#Electronics 31484456	
+#Clothing    18589406	
+
+```
+#9. What was the total amount earned from "Male" customers under the "Electronics" category?
+
+```{r}
+Customer_Final$Gender
+sum(is.na(Customer_Final$Gender))
+
+library(dplyr)
+male <- Customer_Final%>%group_by(Gender,prod_cat)%>%summarise(sum(total_amt,na.rm = TRUE))
+
+male_customer <- male[male$Gender=="M"&male$prod_cat=="Electronics",]
+
+male_customer
+
+
+
+
+
+```
+
+#10. How many customers have more than 10 unique transactions, after removing all transactions which have any negative amounts?
+
+```{r}
+
+library(dplyr)
+
+a1<- Customer_Final[Customer_Final$total_amt>0,]
+a1<- a1[a1$transaction_id>10,]
+
+unique1 <-a1%>%group_by(cust_id)%>%summarise(distinct =n_distinct(transaction_id),sum=sum(total_amt))
+ 
+unique1
+
+
+
+
+```
+
+#11. For all customers aged between 25 - 35, find out: 
+
+
+
+```{r}
+#a. What was the total amount spent for “Electronics” and “Books” product categories?
+
+str(Customer_Final)
+
+
+Customer_Final$DOB <- as.Date(Customer_Final$DOB,format = "%d-%m-%Y")
+class(Customer_Final$DOB)
+Customer_Final$DOB
+
+
+library(eeptools)
+Customer_Final$Age <- floor(age_calc(Customer_Final$DOB,enddate = Sys.Date(), units = "years"))
+
+library(dplyr)
+
+age1 <-Customer_Final%>% filter( between(Age, 25, 35))%>% group_by(prod_cat)%>%summarise(Total_Amount =sum(total_amt,na.rm = TRUE))
+
+age1
+
+
+```
+```{r}
+#b. What was the total amount spent by these customers between 1st Jan, 2014 to 1st Mar, 2014?
+
+age2<- Customer_Final%>%filter(between(Age, 25, 35))
+age2
+age2%>%filter(tran_date >= "2014-01-01", tran_date <= "2014-03-01")%>%summarise(Total_Amount =sum(total_amt,na.rm = TRUE))
+
+
+```
+
